@@ -38,5 +38,6 @@ public class Harmonizer {
     public void correct() {
         listener.logIt("Applying changes...");
         index.makeChanges();
+        listener.logIt("Done.");
     }
 }

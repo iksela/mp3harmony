@@ -25,6 +25,8 @@ import mp3harmony.core.LogEventListener;
  */
 public class Mp3HarmonyView extends FrameView {
 
+    private Harmonizer _harmonizer;
+
     public Mp3HarmonyView(SingleFrameApplication app) {
         super(app);
 
@@ -151,7 +153,6 @@ public class Mp3HarmonyView extends FrameView {
         buttonRestoreHarmony.setText(resourceMap.getString("buttonRestoreHarmony.text")); // NOI18N
         buttonRestoreHarmony.setName("buttonRestoreHarmony"); // NOI18N
 
-        jScrollPane1.setVerticalScrollBarPolicy(javax.swing.ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS);
         jScrollPane1.setName("jScrollPane1"); // NOI18N
 
         logArea.setColumns(20);
@@ -180,19 +181,19 @@ public class Mp3HarmonyView extends FrameView {
         mainPanel.setLayout(mainPanelLayout);
         mainPanelLayout.setHorizontalGroup(
             mainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(mainPanelLayout.createSequentialGroup()
+            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, mainPanelLayout.createSequentialGroup()
                 .addContainerGap()
-                .addGroup(mainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 446, Short.MAX_VALUE)
-                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, mainPanelLayout.createSequentialGroup()
+                .addGroup(mainPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
+                    .addComponent(jScrollPane1, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, 446, Short.MAX_VALUE)
+                    .addGroup(mainPanelLayout.createSequentialGroup()
                         .addComponent(textfieldFolder, javax.swing.GroupLayout.DEFAULT_SIZE, 361, Short.MAX_VALUE)
                         .addGap(18, 18, 18)
                         .addComponent(buttonBrowse))
-                    .addComponent(labelLibrary)
-                    .addComponent(labelThreshold)
-                    .addComponent(labelLog)
-                    .addComponent(sliderThreshold, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(buttonRestoreHarmony, javax.swing.GroupLayout.Alignment.TRAILING))
+                    .addComponent(labelLibrary, javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(labelThreshold, javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(labelLog, javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(sliderThreshold, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(buttonRestoreHarmony))
                 .addContainerGap())
         );
         mainPanelLayout.setVerticalGroup(
@@ -211,8 +212,8 @@ public class Mp3HarmonyView extends FrameView {
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(labelLog)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 18, Short.MAX_VALUE)
+                .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 89, Short.MAX_VALUE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addComponent(buttonRestoreHarmony)
                 .addContainerGap())
         );
@@ -329,7 +330,6 @@ public class Mp3HarmonyView extends FrameView {
 
     @Action(block = Task.BlockingScope.COMPONENT)
     public Task harmony() {
-        logArea.setText("");
         return new HarmonyTask(getApplication());
     }
 
@@ -344,23 +344,50 @@ public class Mp3HarmonyView extends FrameView {
 
         @Override
         protected Object doInBackground() {
-            Harmonizer harmonizer = new Harmonizer(new File(textfieldFolder.getText()), this);
-            harmonizer.buildIndex();
-            int changes = harmonizer.analyze(sliderThreshold.getValue());
-            if (changes > 0) {
+            if (_harmonizer != null) {
                 int choice = JOptionPane.showOptionDialog(null,
-                        changes + " possible tagging inconsistancies have been discovered.\nDo you want to correct them?",
+                        "Changes have already been calculated.\nDo you want to apply them?",
                         "Harmony can be restored!",
                         JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE,
                         null, null, null);
                 if (choice == JOptionPane.YES_OPTION) {
-                    harmonizer.correct();
+                    _harmonizer.correct();
+                    _harmonizer = null;
+                    setEnabledFields(true);
                 } else {
-                    this.logIt("fuckit..");
+                    int choice2 = JOptionPane.showOptionDialog(null,
+                            "Do you want to clear the index, allowing you to analyze changes again?",
+                            "Clean index?",
+                            JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE,
+                            null, null, null);
+                    if (choice2 == JOptionPane.YES_OPTION) {
+                        _harmonizer = null;
+                        logArea.setText("");
+                        setEnabledFields(true);
+                    }
                 }
-            }
-            else {
-                logIt("No changes to be made, your tags are in harmony!");
+            } else {
+                setEnabledFields(false);
+                logArea.setText("");
+                _harmonizer = new Harmonizer(new File(textfieldFolder.getText()), this);
+                _harmonizer.buildIndex();
+                int changes = _harmonizer.analyze(sliderThreshold.getValue());
+                if (changes > 0) {
+                    int choice = JOptionPane.showOptionDialog(null,
+                            changes + " possible tagging inconsistancies have been discovered.\nDo you want to correct them?",
+                            "Harmony can be restored!",
+                            JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE,
+                            null, null, null);
+                    if (choice == JOptionPane.YES_OPTION) {
+                        _harmonizer.correct();
+                        _harmonizer = null;
+                        setEnabledFields(true);
+                    }
+                } else {
+                    logIt("No changes to be made, your tags are in harmony!");
+                    _harmonizer = null;
+                    setEnabledFields(true);
+                }
             }
             return null;  // return your result
         }
@@ -379,5 +406,11 @@ public class Mp3HarmonyView extends FrameView {
         public void statusIt(String message) {
             this.setMessage(message);
         }
+    }
+
+    public void setEnabledFields(boolean enabled) {
+        textfieldFolder.setEnabled(enabled);
+        buttonBrowse.setEnabled(enabled);
+        sliderThreshold.setEnabled(enabled);
     }
 }

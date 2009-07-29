@@ -22,6 +22,7 @@ public class MightyIndex {
 
     private Map<String, List<File>> artists;
     private Map<File, Map<Integer, String>> changes;
+    private Map<String, String> readableChanges;
     private LogEventListener listener;
     public static final Integer ID_ARTIST = 1;
     public static final Integer ID_ALBUM = 2;
@@ -30,6 +31,7 @@ public class MightyIndex {
         this.listener = listener;
         artists = new HashMap<String, List<File>>();
         changes = new HashMap<File, Map<Integer, String>>();
+        readableChanges = new HashMap<String, String>();
     }
 
     public void createEntry(File mp3file) {
@@ -119,6 +121,7 @@ public class MightyIndex {
                 Map<Integer, String> thisChange = new HashMap<Integer, String>(1);
                 thisChange.put(id, to);
                 changes.put(toChange, thisChange);
+                readableChanges.put(from, to);
             }
         }
     }
@@ -131,7 +134,7 @@ public class MightyIndex {
             for (String compareTo : mapFromID(idToTest).keySet()) {
                 if (!beenThereDoneThat.contains(compareTo)) {
                     int lev = StringUtils.getLevenshteinDistance(compareMe, compareTo);
-                    if ((lev != 0) && (lev <= threshold) && (compareMe.length() > threshold)) {
+                    if ((lev != 0) && (lev <= threshold) && (compareMe.length()/2 > threshold) && (compareTo.length()/2 > threshold)) {
                         findBestMatch(idToTest, compareMe, compareTo);
                     }
                 }
@@ -143,10 +146,15 @@ public class MightyIndex {
         levensthein(threshold, ID_ARTIST);
         //levensthein(threshold, ID_ALBUM);
 
+        /*
         for (File toChange : changes.keySet()) {
             for (Integer id:changes.get(toChange).keySet()) {
                 listener.logIt("["+toChange.getName()+"] New value for "+getFieldFromID(id)+" --> "+changes.get(toChange).get(id));
             }
+        }
+         */
+        for (String from:readableChanges.keySet()) {
+            listener.logIt(from+" --> "+readableChanges.get(from));
         }
 
         return changes.size();
