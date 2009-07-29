@@ -21,7 +21,6 @@ import org.jaudiotagger.tag.TagException;
 public class MightyIndex {
 
     private Map<String, List<File>> artists;
-    private Map<String, List<File>> albums;
     private Map<File, Map<Integer, String>> changes;
     private LogEventListener listener;
     public static final Integer ID_ARTIST = 1;
@@ -30,7 +29,6 @@ public class MightyIndex {
     public MightyIndex(LogEventListener listener) {
         this.listener = listener;
         artists = new HashMap<String, List<File>>();
-        albums = new HashMap<String, List<File>>();
         changes = new HashMap<File, Map<Integer, String>>();
     }
 
@@ -38,14 +36,6 @@ public class MightyIndex {
         try {
             MP3File f = (MP3File) AudioFileIO.read(mp3file);
             Tag tag = f.getTag();
-            String album = tag.getFirstAlbum();
-            if (albums.get(album) == null) {
-                List locations = new ArrayList<File>();
-                locations.add(mp3file);
-                albums.put(album, locations);
-            } else {
-                albums.get(album).add(mp3file);
-            }
             String artist = tag.getFirstArtist();
             if (artists.get(artist) == null) {
                 List locations = new ArrayList<File>();
@@ -111,12 +101,7 @@ public class MightyIndex {
     private void findBestMatch(Integer idToTest, String compareMe, String compareTo) {
         int compareMePop = mapFromID(idToTest).get(compareMe).size();
         int compareToPop = mapFromID(idToTest).get(compareTo).size();
-        if (idToTest == ID_ALBUM) {
-            int newCompareTo = 0;
-            for (File file:mapFromID(idToTest).get(compareTo)) {
 
-            }
-        }
         if (compareMePop >= compareToPop) {
             //listener.logIt(compareTo + " --> " + compareMe);
             markForChange(idToTest, compareTo, compareMe);
@@ -156,7 +141,7 @@ public class MightyIndex {
 
     public int analyze(int threshold) {
         levensthein(threshold, ID_ARTIST);
-        levensthein(threshold, ID_ALBUM);
+        //levensthein(threshold, ID_ALBUM);
 
         for (File toChange : changes.keySet()) {
             for (Integer id:changes.get(toChange).keySet()) {
@@ -169,7 +154,7 @@ public class MightyIndex {
 
     public Map<String, List<File>> mapFromID(Integer id) {
         if (id == ID_ALBUM) {
-            return albums;
+            return null;
         }
         if (id == ID_ARTIST) {
             return artists;
